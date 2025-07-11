@@ -11,6 +11,7 @@ from bson.binary import STANDARD
 import random
 import sys
 from datetime import datetime
+from pprint import pprint
 
 KEY_PROVIDER = "local"
 
@@ -124,12 +125,28 @@ for i in range(1, RECORDS_TO_INSERT):
     docs.append(PATIENT_DOC)
 
 result = encrypted_collection.insert_many(docs)
-print(f"{len(docs)} records inserted: {result.inserted_ids}")
+#print(f"{len(docs)} records inserted: {result.inserted_ids}")
+print(f"{len(docs)} records inserted.")
 print()
 
-# find_result = encrypted_collection.find_one({
-#     "patientRecord.ssn": SSN
-# })
 
-# print(find_result)
-# print()
+#
+# Range query
+#
+
+print(f"Looking for one record with DOB in the year {YEAR}.")
+
+query = {
+    "patientRecord.dob": {
+        "$gte": datetime(YEAR, 1, 1),
+        "$lte": datetime(YEAR, 12, 31)
+    }
+}
+
+find_result = encrypted_collection.find_one(
+    query,
+    projection={"__safeContent__": 0, "_id": 0}
+)
+
+pprint(find_result)
+print()
