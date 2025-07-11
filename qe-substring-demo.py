@@ -131,12 +131,28 @@ print()
 
 
 #
+# Equalty query
+#
+
+print(f"Looking for one record with SSN {SSN}.")
+
+QUERY = { "patientRecord.ssn": SSN }
+
+find_result = encrypted_collection.find_one(
+    QUERY,
+    projection={"__safeContent__": 0, "_id": 0}
+)
+
+pprint(find_result)
+print()
+
+#
 # Range query
 #
 
 print(f"Looking for one record with DOB in the year {YEAR}.")
 
-query = {
+QUERY = {
     "patientRecord.dob": {
         "$gte": datetime(YEAR, 1, 1),
         "$lte": datetime(YEAR, 12, 31)
@@ -144,7 +160,7 @@ query = {
 }
 
 find_result = encrypted_collection.find_one(
-    query,
+    QUERY,
     projection={"__safeContent__": 0, "_id": 0}
 )
 
