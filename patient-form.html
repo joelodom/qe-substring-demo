@@ -11,49 +11,49 @@
   <header>
     <h1>Hospital Customer Service Application</h1>
   </header>
-  <main style="display: flex; gap: 20px;">
-    <section id="add-patient" style="flex: 1;">
+  <main style="display: flex; gap: 20px; max-width: 1000px; margin: 20px auto;">
+    <section id="add-patient" style="flex: 1.2;">
       <h2>Add New Patient</h2>
-      <form id="add-patient-form" action="#" method="post">
+      <form id="add-patient-form" action="#" method="post" autocomplete="off">
         <div>
           <label>First Name:</label>
-          <input type="text" id="first-name" name="firstName" required>
+          <input type="text" id="first-name" name="firstName" required autocomplete="off">
         </div>
         <div>
           <label>Last Name:</label>
-          <input type="text" id="last-name" name="lastName" required>
+          <input type="text" id="last-name" name="lastName" required autocomplete="off">
         </div>
         <div>
-          <label>Date of Birth:</label>
-          <input type="date" id="dob" name="dateOfBirth" required>
+          <label>Date of Birth (YYYY-MM-DD):</label>
+          <input type="text" id="dob" name="dateOfBirth" required placeholder="e.g. 1985-04-23" autocomplete="off">
         </div>
         <div>
           <label>Zip Code:</label>
-          <input type="text" id="zip" name="zipCode" required>
+          <input type="text" id="zip" name="zipCode" required pattern="\d{5}" title="Please enter a 5-digit zip code." autocomplete="off">
         </div>
         <div>
           <button type="submit">Add Patient</button>
         </div>
       </form>
     </section>
-    <section id="search-patient" style="flex: 1;">
+    <section id="search-patient" style="flex: 1.2;">
       <h2>Search Patients</h2>
-      <form id="search-patient-form" action="#" method="get">
+      <form id="search-patient-form" action="#" method="get" autocomplete="off">
         <div>
           <label>First Name:</label>
-          <input type="text" id="search-first-name" name="firstName">
+          <input type="text" id="search-first-name" name="firstName" autocomplete="off">
         </div>
         <div>
           <label>Last Name:</label>
-          <input type="text" id="search-last-name" name="lastName">
+          <input type="text" id="search-last-name" name="lastName" autocomplete="off">
         </div>
         <div>
           <label>Year of Birth:</label>
-          <input type="number" id="search-yob" name="yearOfBirth" min="1900" max="2100">
+          <input type="number" id="search-yob" name="yearOfBirth" min="1900" max="2099" autocomplete="off">
         </div>
         <div>
           <label>Zip Code:</label>
-          <input type="text" id="search-zip" name="zipCode">
+          <input type="text" id="search-zip" name="zipCode" pattern="\d{5}" title="Please enter a 5-digit zip code." autocomplete="off">
         </div>
         <div>
           <button type="submit">Search</button>
@@ -61,5 +61,89 @@
       </form>
     </section>
   </main>
+
+  <!-- Search Results Section -->
+  <section id="search-results" style="max-width: 1000px; margin: 20px auto;">
+    <h2>Search Results</h2>
+    <table id="results-table" style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr>
+          <th style="border: 1px solid #ccc; padding: 8px;">First Name</th>
+          <th style="border: 1px solid #ccc; padding: 8px;">Last Name</th>
+          <th style="border: 1px solid #ccc; padding: 8px;">Date of Birth</th>
+          <th style="border: 1px solid #ccc; padding: 8px;">Zip Code</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Dynamic rows will be inserted here -->
+      </tbody>
+    </table>
+  </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Validation for Add Patient form
+      document.getElementById('add-patient-form').addEventListener('submit', function(e) {
+        const firstName = document.getElementById('first-name').value.trim();
+        const lastName = document.getElementById('last-name').value.trim();
+        const dob = document.getElementById('dob').value.trim();
+        const zip = document.getElementById('zip').value.trim();
+        const zipRegex = /^\d{5}$/;
+        const dobRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+        if (!firstName || !lastName || !dob || !zip) {
+          alert('All fields are required.');
+          e.preventDefault();
+          return;
+        }
+        if (!dobRegex.test(dob)) {
+          alert('Date of Birth must be in YYYY-MM-DD format.');
+          e.preventDefault();
+          return;
+        }
+        const dobDate = new Date(dob);
+        const year = dobDate.getFullYear();
+        if (isNaN(dobDate) || year < 1900 || year > 2099) {
+          alert('Birth year must be between 1900 and 2099.');
+          e.preventDefault();
+          return;
+        }
+        if (!zipRegex.test(zip)) {
+          alert('Zip code must be a 5-digit number.');
+          e.preventDefault();
+          return;
+        }
+      });
+
+      // Existing Search validation left unchanged
+      document.getElementById('search-patient-form').addEventListener('submit', function(e) {
+        const firstName = document.getElementById('search-first-name').value.trim();
+        const lastName = document.getElementById('search-last-name').value.trim();
+        const yob = document.getElementById('search-yob').value;
+        const zip = document.getElementById('search-zip').value.trim();
+        const zipRegex = /^\d{5}$/;
+        const currentYear = new Date().getFullYear();
+
+        if (!firstName && !lastName && !yob && !zip) {
+          alert('Please enter at least one search criterion.');
+          e.preventDefault();
+          return;
+        }
+        if (yob) {
+          const yobNum = parseInt(yob, 10);
+          if (isNaN(yobNum) || yobNum < 1900 || yobNum > currentYear) {
+            alert('Year of birth must be between 1900 and ' + currentYear + '.');
+            e.preventDefault();
+            return;
+          }
+        }
+        if (zip && !zipRegex.test(zip)) {
+          alert('Zip code must be a 5-digit number.');
+          e.preventDefault();
+          return;
+        }
+      });
+    });
+  </script>
 </body>
 </html>
