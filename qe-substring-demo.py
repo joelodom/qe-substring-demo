@@ -10,6 +10,7 @@ from bson.codec_options import CodecOptions
 from bson.binary import STANDARD
 import random
 import sys
+from datetime import datetime
 
 KEY_PROVIDER = "local"
 
@@ -53,11 +54,20 @@ ENCRYPTED_FIELDS_MAP = {
         {
             "path": "patientRecord.ssn",
             "bsonType": "string",
-            "queries": [{"queryType": "equality"}] # queryable
+            "queries": [ {"queryType": "equality"} ]  # equality queryable
         },
         {
-            "path": "patientRecord.billing", # encrypted, not queryable
+            "path": "patientRecord.billing",   # encrypted, not queryable
             "bsonType": "object",
+        },
+        {
+            "path": "patientRecord.dob",
+            "bsonType": "date",
+            "queries": [ {
+                "queryType": "range",  # range queryable
+                "min": datetime(1900, 1, 1),
+                "max": datetime(2099, 12, 31)
+            } ]
         }
     ]
 }
@@ -90,8 +100,9 @@ PATIENT_DOC = {
         "ssn": SECRET_SSN,
         "billing": {
             "type": "Visa",
-            "number": "4111111111111111",
+            "number": "4111111111111111"
         },
+        "dob": datetime(1985, 7, 3)
     },
 }
 
