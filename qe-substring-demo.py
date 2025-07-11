@@ -2,40 +2,6 @@
 # https://chatgpt.com/c/68701de3-a0a0-8004-bc96-4e3bf23c2801 is my scratchpad
 #
 
-
-
-
-
-# from pymongo import MongoClient
-
-# # 1. Connect to local MongoDB
-# client = MongoClient("mongodb://localhost:27017/")
-
-# # 2. Select (or create) a database and collection
-# db = client["demo_db"]
-# collection = db["people"]
-
-# # 3. Insert a document with a string field
-# person = {"name": "Alice", "age": 30}
-# insert_result = collection.insert_one(person)
-# print(f"Inserted document _id: {insert_result.inserted_id}")
-
-# # 4. Query the collection by that string field
-# query = {"name": "Alice"}
-# found = collection.find_one(query)
-
-# if found:
-#     print("Found document:")
-#     print(found)
-# else:
-#     print("No document found with that name.")
-
-
-
-
-
-
-
 from pymongo.encryption_options import AutoEncryptionOpts
 from pymongo import MongoClient
 import os
@@ -43,42 +9,40 @@ from pymongo.encryption import ClientEncryption
 from bson.codec_options import CodecOptions
 from bson.binary import STANDARD
 import random
+import sys
 
-# See https://www.mongodb.com/docs/v7.0/core/queryable-encryption/quick-start/#std-label-qe-quick-start
-# That was my starting point for this client.
+KEY_PROVIDER = "local"
 
-# KMS provider name should be one of the following: "aws", "gcp", "azure", "kmip" or "local"
-kms_provider_name = "local"
+MONGO_URI = "mongodb://localhost:27017/"
 
-uri = "mongodb://localhost:27017/"
+KEY_VAULT_DB = "encryption"
+KEY_VAULT_COLL = "__keyVault"
+KEY_VAULT_NAMESPACE = f"{KEY_VAULT_DB}.{KEY_VAULT_COLL}"
 
-key_vault_database_name = "encryption"
-key_vault_collection_name = "__keyVault"
-key_vault_namespace = f"{key_vault_database_name}.{key_vault_collection_name}"
-encrypted_database_name = "medicalRecords"
-encrypted_collection_name = "patients"
+DB_NAME = "medicalRecords"
+COLL_NAME = "patients"
 
 # 96 random hardcoded bytes, because it's only an example
-local_master_key = b";1\x0f\x06%\x97\x99\xa5\xaen\xb4\x8b<T3v\x0b\\\xeb\x9f\x13\xa8\xb9\xc0[\xa0\xc3\xb9\xa7\x0e|\x8e3o5\x1a\xd8\x08H\x0b \xf1\xc1Eb\xeb\x0b\x8e\xde\xe4Oz\xe3\x0bs%$R\x13?\x9aI\x1d\xd0'\xee\xd8\x06\x85\x16\x90\xb0\x9ec#\x9c=Y\x8f\xc5\xc211\xc5\x15\x07\xae\xd2\xc6\xdb\xc5\x9c^S\xae,"
+MASTER_KEY = "V2hlbiB0aGUgY2F0J3MgYXdheSwgdGhlIG1pY2Ugd2lsbCBwbGF5LCBidXQgd2hlbiB0aGUgZG9nIGlzIGFyb3VuZCwgdGhlIGNhdCBiZWNvbWVzIGEgbmluamEuLi4u"
 
-kms_provider_credentials = {
+KMS_CREDS = {
     "local": {
-        "key": local_master_key
+        "key": MASTER_KEY
     },
 }
 
 # CRYPT_SHARED_LIB = "/Users/joel.odom/mongo-crypt-8.1.0/lib/mongo_crypt_v1.dylib"
 
-auto_encryption_options = AutoEncryptionOpts(
-    kms_provider_credentials,
-    key_vault_namespace,
+AUTO_ENCRYPTION_OPTS = AutoEncryptionOpts(
+    KMS_CREDS,
+    KEY_VAULT_NAMESPACE,
     # crypt_shared_lib_path=CRYPT_SHARED_LIB
 )
 
-encrypted_client = MongoClient(
-    uri, auto_encryption_opts=auto_encryption_options)
+ENCRYPTED_CLIENT = MongoClient(
+    MONGO_URI, auto_encryption_opts=AUTO_ENCRYPTION_OPTS)
 
-encrypted_fields_map = {
+ENCRYPTED_FIELDS_MAP = {
     "fields": [
         {
             "path": "patientRecord.ssn",
@@ -92,22 +56,24 @@ encrypted_fields_map = {
     ]
 }
 
-client_encryption = ClientEncryption(
-    kms_providers=kms_provider_credentials,
-    key_vault_namespace=key_vault_namespace,
-    key_vault_client=encrypted_client,
+CLIENT_ENCRYPTION = ClientEncryption(
+    kms_providers=KMS_CREDS,
+    key_vault_namespace=KEY_VAULT_NAMESPACE,
+    key_vault_client=ENCRYPTED_CLIENT,
     codec_options=CodecOptions(uuid_representation=STANDARD)
 )
 
-customer_master_key_credentials = {} # no creds because using a local key CMK
+MASTER_KEY_CREDS = {} # no creds because using a local key CMK
 
-# client_encryption.create_encrypted_collection(
-#     encrypted_client[encrypted_database_name],
-#     encrypted_collection_name,
-#     encrypted_fields_map,
-#     kms_provider_name,
-#     customer_master_key_credentials,
-# )
+if "--create-collection" in sys.argv:
+    print("Creating collection...")
+    CLIENT_ENCRYPTION.create_encrypted_collection(
+        ENCRYPTED_CLIENT[DB_NAME],
+        COLL_NAME,
+        ENCRYPTED_FIELDS_MAP,
+        KEY_PROVIDER,
+        MASTER_KEY_CREDS,
+    )
 
 # At this point in working through the quick start to build this code, I could
 # see the new encrypted collection in Atlas. w00t!
@@ -117,7 +83,7 @@ customer_master_key_credentials = {} # no creds because using a local key CMK
 
 SECRET_SSN = f"{random.randint(0, 999999999):09d}"
 
-patient_document = {
+PATIENT_DOC = {
     "patientName": "Jon Doe",
     "patientId": 12345678,
     "patientRecord": {
@@ -129,8 +95,8 @@ patient_document = {
     },
 }
 
-encrypted_collection = encrypted_client[encrypted_database_name][encrypted_collection_name]
-result = encrypted_collection.insert_one(patient_document)
+encrypted_collection = ENCRYPTED_CLIENT[DB_NAME][COLL_NAME]
+result = encrypted_collection.insert_one(PATIENT_DOC)
 print(f"One record inserted: {result.inserted_id}")
 print()
 
