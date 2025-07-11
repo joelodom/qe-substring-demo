@@ -91,29 +91,45 @@ if "--create-collection" in sys.argv:
         MASTER_KEY_CREDS,
     )
 
-SECRET_SSN = f"{random.randint(0, 999999999):09d}"
+#
+# Insert random records
+#
 
-PATIENT_DOC = {
-    "patientName": "Jon Doe",
-    "patientId": 12345678,
-    "patientRecord": {
-        "ssn": SECRET_SSN,
-        "billing": {
-            "type": "Visa",
-            "number": "4111111111111111"
-        },
-        "dob": datetime(1985, 7, 3)
-    },
-}
+RECORDS_TO_INSERT = 100
 
 encrypted_collection = ENCRYPTED_CLIENT[DB_NAME][COLL_NAME]
-result = encrypted_collection.insert_one(PATIENT_DOC)
-print(f"One record inserted: {result.inserted_id}")
+docs = []
+
+for i in range(1, RECORDS_TO_INSERT):
+    SSN = f"{random.randint(0, 999999999):09d}"
+    CARD_NUMBER = f"4{random.randint(0, 999999999999999):09d}"
+
+    YEAR = random.randint(1900, 2099)
+    MONTH = random.randint(1, 12)
+    DAY = random.randint(1, 28)
+
+    PATIENT_DOC = {
+        "patientName": "Jon Doe",
+        "patientId": 12345678,
+        "patientRecord": {
+            "ssn": SSN,
+            "billing": {
+                "type": "Visa",
+                "number": CARD_NUMBER
+            },
+            "dob": datetime(YEAR, MONTH, DAY)
+        },
+    }
+
+    docs.append(PATIENT_DOC)
+
+result = encrypted_collection.insert_many(docs)
+print(f"{len(docs)} records inserted: {result.inserted_ids}")
 print()
 
-find_result = encrypted_collection.find_one({
-    "patientRecord.ssn": SECRET_SSN
-})
+# find_result = encrypted_collection.find_one({
+#     "patientRecord.ssn": SSN
+# })
 
-print(find_result)
-print()
+# print(find_result)
+# print()
