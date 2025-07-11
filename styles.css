@@ -1,0 +1,92 @@
+/* styles.css */
+
+/* Reset and box-sizing */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f7f8;
+  color: #333;
+  line-height: 1.6;
+  padding: 20px;
+}
+
+header {
+  background-color: #4CAF50;
+  color: #fff;
+  padding: 20px;
+  text-align: center;
+  border-radius: 5px;
+}
+
+main {
+  display: flex;
+  gap: 20px;
+  max-width: 1000px;
+  margin: 20px auto;
+}
+
+/* Panels styling */
+#add-patient,
+#search-patient {
+  flex: 1.2;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Distinct background colors */
+#add-patient {
+  background-color: #e8f5e9;
+}
+
+#search-patient {
+  background-color: #e3f2fd;
+}
+
+section {
+  margin-bottom: 0; /* panels already spaced by gap */
+}
+
+h2 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+form div {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+input[type="text"],
+input[type="date"],
+input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+button {
+  background-color: #4CAF50;
+  color: #fff;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #45a049;
+}
