@@ -33,19 +33,21 @@ KMS_CREDS = {
     },
 }
 
-# CRYPT_SHARED_LIB = "/Users/joel.odom/mongo-crypt-8.1.0/lib/mongo_crypt_v1.dylib"
+CRYPT_SHARED_LIB = "/Users/joel.odom/mongo_crypt_shared_v1-8.2.0-alpha-2632-g9217e56/lib/mongo_crypt_v1.dylib"
+os.environ["MONGOCRYPT_SHARED_LIB_PATH"] = CRYPT_SHARED_LIB
 
 AUTO_ENCRYPTION_OPTS = AutoEncryptionOpts(
     KMS_CREDS,
     KEY_VAULT_NAMESPACE,
-    # crypt_shared_lib_path=CRYPT_SHARED_LIB
+    crypt_shared_lib_path=CRYPT_SHARED_LIB
 )
 
 ENCRYPTED_CLIENT = MongoClient(
     MONGO_URI, auto_encryption_opts=AUTO_ENCRYPTION_OPTS)
 
-if "--drop-database" in sys.argv:
-    print("Dropping database...")
+if "--destroy-database" in sys.argv:
+    print("Destroying database...")
+    print()
     ENCRYPTED_CLIENT.drop_database(DB_NAME)
     # This SHOULD drop the key vault here, but it doesn't matter for demo
     exit()
@@ -69,7 +71,19 @@ ENCRYPTED_FIELDS_MAP = {
                 "min": datetime(1900, 1, 1),
                 "max": datetime(2099, 12, 31)
             } ]
-        }
+        },
+        {
+            "path": "patientNotes",
+            "bsonType": "string",
+            "queries": [ {
+                "queryType": "substringPreview",
+                "strMinQueryLength": 3,
+                "strMaxQueryLength": 8,
+                "caseSensitive": False,
+                "diacriticSensitive": False,
+                "strMaxLength": 60
+            } ]
+        },
     ]
 }
 
@@ -101,7 +115,7 @@ RECORDS_TO_INSERT = 100
 encrypted_collection = ENCRYPTED_CLIENT[DB_NAME][COLL_NAME]
 docs = []
 
-for i in range(1, RECORDS_TO_INSERT):
+for i in range(0, RECORDS_TO_INSERT):
     SSN = f"{random.randint(0, 999999999):09d}"
     CARD_NUMBER = f"4{random.randint(0, 999999999999999):09d}"
 
@@ -120,6 +134,7 @@ for i in range(1, RECORDS_TO_INSERT):
             },
             "dob": datetime(YEAR, MONTH, DAY)
         },
+        "patientNotes": f"These are notes for patient with SSN {SSN}."
     }
 
     docs.append(PATIENT_DOC)
@@ -166,3 +181,32 @@ find_result = encrypted_collection.find_one(
 
 pprint(find_result)
 print()
+
+#
+# Substring search
+#
+
+PARTIAL_SSN = SSN[-4:]
+print(f"Looking records with partial SSN matching {PARTIAL_SSN} in notes.")
+
+
+PIPELINE = [
+    {
+        "$match": {
+            "$expr": {
+                "$encStrContains": {
+                    "input": "$patientNotes",
+                    "substring": PARTIAL_SSN
+                }
+            }
+        }
+    },
+    {
+        "$project": { "__safeContent__": 0, "_id": 0 }
+    }
+]
+
+cursor = encrypted_collection.aggregate(PIPELINE)
+
+for doc in cursor:
+    pprint(doc)
