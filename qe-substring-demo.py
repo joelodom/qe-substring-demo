@@ -42,6 +42,12 @@ AUTO_ENCRYPTION_OPTS = AutoEncryptionOpts(
 ENCRYPTED_CLIENT = MongoClient(
     MONGO_URI, auto_encryption_opts=AUTO_ENCRYPTION_OPTS)
 
+if "--drop-database" in sys.argv:
+    print("Dropping database...")
+    ENCRYPTED_CLIENT.drop_database(DB_NAME)
+    # This SHOULD drop the key vault here, but it doesn't matter for demo
+    exit()
+
 ENCRYPTED_FIELDS_MAP = {
     "fields": [
         {
@@ -63,7 +69,7 @@ CLIENT_ENCRYPTION = ClientEncryption(
     codec_options=CodecOptions(uuid_representation=STANDARD)
 )
 
-MASTER_KEY_CREDS = {} # no creds because using a local key CMK
+MASTER_KEY_CREDS = {}  # no creds because using a local key CMK
 
 if "--create-collection" in sys.argv:
     print("Creating collection...")
@@ -74,12 +80,6 @@ if "--create-collection" in sys.argv:
         KEY_PROVIDER,
         MASTER_KEY_CREDS,
     )
-
-# At this point in working through the quick start to build this code, I could
-# see the new encrypted collection in Atlas. w00t!
-#
-# But....  I can't run it twice without getting an exception, so commenting it out for now.
-#
 
 SECRET_SSN = f"{random.randint(0, 999999999):09d}"
 
@@ -99,8 +99,6 @@ encrypted_collection = ENCRYPTED_CLIENT[DB_NAME][COLL_NAME]
 result = encrypted_collection.insert_one(PATIENT_DOC)
 print(f"One record inserted: {result.inserted_id}")
 print()
-
-# At this point in working through the quick start, I can see reconds appear
 
 find_result = encrypted_collection.find_one({
     "patientRecord.ssn": SECRET_SSN
