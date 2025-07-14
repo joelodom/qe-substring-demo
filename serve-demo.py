@@ -1,21 +1,123 @@
-#!/usr/bin/env python3
 import os
 import json
 from flask import Flask, request, send_from_directory, redirect, url_for, jsonify, abort
 from pymongo import MongoClient
+from datetime import datetime
+from pymongo.encryption_options import AutoEncryptionOpts
+from pymongo.encryption import ClientEncryption
+from bson.codec_options import CodecOptions
+from bson.binary import STANDARD
 
+#
 # Configuration (env vars overridable)
-MONGO_URI = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
-DB_NAME = os.environ.get('DB_NAME', 'substringHospital')
-COLLECTION = os.environ.get('COLLECTION', 'patients')
-PORT = int(os.environ.get('PORT', 3141))
-SAMPLE_FILE = os.environ.get('SAMPLE_FILE', 'sample-data.json')
+#
 
-# Flask and Mongo setup
+PORT = 3141
+SAMPLE_FILE = 'sample-data.json'
+
+MONGO_URI = 'mongodb://localhost:27017/'
+
+DB = 'substringHospital'
+COLLECTION = 'patients'
+
+KEY_PROVIDER = "local"
+
+KEY_VAULT_DB = "encryption"
+KEY_VAULT_COLL = "__keyVault"
+KEY_VAULT_NAMESPACE = f"{KEY_VAULT_DB}.{KEY_VAULT_COLL}"
+
+#############
+#
+# MongoDB Queryable Encryption
+#
+#############
+
+# 96 random hardcoded bytes, because it's only an example
+MASTER_KEY = "V2hlbiB0aGUgY2F0J3MgYXdheSwgdGhlIG1pY2Ugd2lsbCBwbGF5LCBidXQgd2hlbiB0aGUgZG9nIGlzIGFyb3VuZCwgdGhlIGNhdCBiZWNvbWVzIGEgbmluamEuLi4u"
+
+KMS_CREDS = {
+    "local": {
+        "key": MASTER_KEY
+    },
+}
+
+CRYPT_SHARED_LIB = "/Users/joel.odom/mongo_crypt_shared_v1-8.2.0-alpha-2632-g9217e56/lib/mongo_crypt_v1.dylib"
+os.environ["MONGOCRYPT_SHARED_LIB_PATH"] = CRYPT_SHARED_LIB
+
+AUTO_ENCRYPTION_OPTS = AutoEncryptionOpts(
+    KMS_CREDS,
+    KEY_VAULT_NAMESPACE,
+    crypt_shared_lib_path=CRYPT_SHARED_LIB
+)
+
+ENCRYPTED_CLIENT = MongoClient(
+    MONGO_URI, auto_encryption_opts=AUTO_ENCRYPTION_OPTS)
+
+ENCRYPTED_FIELDS_MAP = {
+    "fields": [
+        {
+            "path": "firstName",
+            "bsonType": "string",
+            "queries": [ {
+                "queryType": "prefixPreview",  # prefix queryable
+                "strMinQueryLength": 3,
+                "strMaxQueryLength": 8,
+                "caseSensitive": False,
+                "diacriticSensitive": False,
+            } ]
+        },
+        # {
+        #     "path": "lastName",
+        #     "bsonType": "string",
+        #     "queries": [ {
+        #         "queryType": "prefixPreview",  # prefix queryable
+        #         "strMinQueryLength": 3,
+        #         "strMaxQueryLength": 8,
+        #         "caseSensitive": False,
+        #         "diacriticSensitive": False,
+        #     } ]
+        # },
+        # {
+        #     "path": "dateOfBirth",
+        #     "bsonType": "date",
+        #     "queries": [ {
+        #         "queryType": "range",  # range queryable
+        #         "min": datetime(1900, 1, 1),
+        #         "max": datetime(2099, 12, 31)
+        #     } ]
+        # },
+        {
+            "path": "zipCode",
+            "bsonType": "string",
+            "queries": [ {"queryType": "equality"} ]  # equality queryable
+        },
+        # {
+        #     "path": "notes",
+        #     "bsonType": "string",
+        #     "queries": [ {
+        #         "queryType": "substringPreview",  # substring queryable
+        #         "strMinQueryLength": 3,
+        #         "strMaxQueryLength": 8,
+        #         "caseSensitive": False,
+        #         "diacriticSensitive": False,
+        #         "strMaxLength": 300
+        #     } ]
+        # },
+    ]
+}
+
+CLIENT_ENCRYPTION = ClientEncryption(
+    kms_providers=KMS_CREDS,
+    key_vault_namespace=KEY_VAULT_NAMESPACE,
+    key_vault_client=ENCRYPTED_CLIENT,
+    codec_options=CodecOptions(uuid_representation=STANDARD)
+)
+
+MASTER_KEY_CREDS = {}  # no creds because using a local key CMK
+
+
+# Flask setup
 app = Flask(__name__, static_folder='.', static_url_path='')
-client = MongoClient(MONGO_URI)
-db = client[DB_NAME]
-patients = db[COLLECTION]
 
 # Disable caching for all responses
 def nocache(response):
@@ -25,7 +127,10 @@ def nocache(response):
     return response
 app.after_request(nocache)
 
-# Serve static HTML and CSS
+#
+# Web service endpoints
+#
+
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -34,7 +139,6 @@ def index():
 def serve_css():
     return send_from_directory('.', 'styles.css')
 
-# Serve sample data JSON
 @app.route('/sample-data', methods=['GET'])
 def sample_data():
     try:
@@ -44,9 +148,20 @@ def sample_data():
         abort(500, description=f'Error reading sample data: {e}')
     return jsonify(data)
 
-# Load sample data into DB
 @app.route('/load-sample', methods=['POST'])
 def load_sample():
+    destroy_db()
+
+    print("Creating collection...")
+    CLIENT_ENCRYPTION.create_encrypted_collection(
+        ENCRYPTED_CLIENT[DB],
+        COLLECTION,
+        ENCRYPTED_FIELDS_MAP,
+        KEY_PROVIDER,
+        MASTER_KEY_CREDS,
+    )
+
+    print("Reading sample file...")
     try:
         with open(SAMPLE_FILE, 'r') as f:
             docs = json.load(f)
@@ -54,12 +169,12 @@ def load_sample():
             raise ValueError('Sample data must be a JSON array')
     except Exception as e:
         return f'Error reading sample file: {e}', 500
+    
     # Replace existing
-    patients.delete_many({})
-    patients.insert_many(docs)
+    print("Inserting sample data...")
+    ENCRYPTED_CLIENT[DB][COLLECTION].insert_many(docs)
     return 'Sample data loaded', 200
 
-# Add patient endpoint
 @app.route('/add-patient', methods=['POST'])
 def add_patient():
     data = {
@@ -72,16 +187,45 @@ def add_patient():
     # Validate required fields
     if not all([data['firstName'], data['lastName'], data['dateOfBirth'], data['zipCode']]):
         return 'Missing required fields', 400
-    patients.insert_one(data)
+    ENCRYPTED_CLIENT[DB][COLLECTION].insert_one(data)
     return redirect(url_for('index'))
 
-# Search endpoint
 @app.route('/search', methods=['GET'])
 def search():
+    print("Searching...")
+
+
+
+    #
+    # First name prefix search
+    #
+
+    firstName = request.args.get('firstName', '').strip()
+    if len(firstName) >= 3:
+        PIPELINE = [
+            {
+                "$match": {
+                    "$expr": {
+                        "$encStrStartsWith": {
+                            "input": "$firstName",
+                            "prefix": firstName
+                        }
+                    }
+                }
+            },
+            {
+                "$project": { "_id": 0, "__safeContent__": 0 }
+            }
+        ]
+
+        cursor = ENCRYPTED_CLIENT[DB][COLLECTION].aggregate(PIPELINE)
+        r = jsonify(list(cursor))
+        return r
+
+
+
     query = {}
-    v = request.args.get('firstName', '').strip()
-    if len(v) >= 3:
-        query['firstName'] = {'$regex': v, '$options': 'i'}
+
     v = request.args.get('lastName', '').strip()
     if len(v) >= 3:
         query['lastName'] = {'$regex': v, '$options': 'i'}
@@ -94,13 +238,16 @@ def search():
     v = request.args.get('notes', '').strip()
     if len(v) >= 3:
         query['notes'] = {'$regex': v, '$options': 'i'}
-    results = list(patients.find(query, {'_id': 0}))
+    results = list(ENCRYPTED_CLIENT[DB][COLLECTION].find(
+        query, {'__safeContent__': 0, '_id': 0}))
+    print(f"Results: {results}")
     return jsonify(results)
 
-# Destroy database endpoint
 @app.route('/destroy-db', methods=['POST'])
 def destroy_db():
-    client.drop_database(DB_NAME)
+    print("Dropping database...")
+    ENCRYPTED_CLIENT.drop_database(DB)
+    # TODO: Drop keyvault here
     return 'Database dropped', 200
 
 if __name__ == '__main__':
