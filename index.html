@@ -86,67 +86,74 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      // Add Patient form uses default POST to /add-patient, no changes needed here
-
-      // Handle Search form via AJAX
       const searchForm = document.getElementById('search-patient-form');
       const resultsBody = document.querySelector('#results-table tbody');
+      let debounceTimer;
 
-      searchForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        // Gather search criteria
-        const params = new URLSearchParams();
+      // Core search execution
+      const executeSearch = () => {
         const fn = document.getElementById('search-first-name').value.trim();
         const ln = document.getElementById('search-last-name').value.trim();
-        const yob = document.getElementById('search-yob').value;
+        const yob = document.getElementById('search-yob').value.trim();
         const zip = document.getElementById('search-zip').value.trim();
 
-        if (fn) params.append('firstName', fn);
-        if (ln) params.append('lastName', ln);
-        if (yob) params.append('yearOfBirth', yob);
-        if (zip) params.append('zipCode', zip);
+        // Criteria: first or last name >=3 chars, or full DOB or full zip
+        const criteria = {};
+        if (fn.length >= 3) criteria.firstName = fn;
+        if (ln.length >= 3) criteria.lastName = ln;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(document.getElementById('dob').value)) {
+          // For autocomplete, include date of birth if fully entered in add form
+          criteria.dateOfBirth = document.getElementById('dob').value.trim();
+        }
+        if (zip.length === 5) criteria.zipCode = zip;
+        if (yob.length === 4) criteria.yearOfBirth = yob;
 
         // Must have at least one
-        if ([fn, ln, yob, zip].every(val => !val)) {
-          alert('Please enter at least one search criterion.');
+        if (Object.keys(criteria).length === 0) {
+          resultsBody.innerHTML = '';
           return;
         }
 
+        const params = new URLSearchParams();
+        Object.entries(criteria).forEach(([key, val]) => params.append(key, val));
+
         fetch('/search?' + params.toString())
-          .then(res => {
-            if (!res.ok) throw new Error('Network response was not ok');
-            return res.json();
-          })
+          .then(res => res.ok ? res.json() : Promise.reject('Network response not ok'))
           .then(data => {
-            // Clear existing rows
             resultsBody.innerHTML = '';
-            if (data.length === 0) {
+            if (!data.length) {
               const tr = document.createElement('tr');
               const td = document.createElement('td');
-              td.colSpan = 4;
-              td.textContent = 'No patients found.';
-              td.style.textAlign = 'center';
-              tr.appendChild(td);
-              resultsBody.appendChild(tr);
+              td.colSpan = 4; td.textContent = 'No patients found.'; td.style.textAlign = 'center';
+              tr.appendChild(td); resultsBody.appendChild(tr);
               return;
             }
-            // Populate rows
             data.forEach(p => {
               const tr = document.createElement('tr');
-              ['firstName', 'lastName', 'dateOfBirth', 'zipCode'].forEach(key => {
+              ['firstName','lastName','dateOfBirth','zipCode'].forEach(key => {
                 const td = document.createElement('td');
                 td.textContent = p[key] || '';
-                td.style.border = '1px solid #ccc';
-                td.style.padding = '8px';
+                td.style.border = '1px solid #ccc'; td.style.padding = '8px';
                 tr.appendChild(td);
               });
               resultsBody.appendChild(tr);
             });
           })
-          .catch(err => {
-            console.error('Fetch error:', err);
-            alert('Error fetching search results.');
-          });
+          .catch(err => console.error('Autocomplete error:', err));
+      };
+
+      // Attach input listeners with debounce
+      ['search-first-name','search-last-name','search-yob','search-zip'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(executeSearch, 300);
+        });
+      });
+
+      // Keep form submit for explicit search
+      searchForm.addEventListener('submit', e => {
+        e.preventDefault();
+        executeSearch();
       });
     });
   </script>
