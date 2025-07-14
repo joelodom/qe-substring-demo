@@ -91,18 +91,18 @@ ENCRYPTED_FIELDS_MAP = {
             "bsonType": "string",
             "queries": [ {"queryType": "equality"} ]  # equality queryable
         },
-        # {
-        #     "path": "notes",
-        #     "bsonType": "string",
-        #     "queries": [ {
-        #         "queryType": "substringPreview",  # substring queryable
-        #         "strMinQueryLength": 3,
-        #         "strMaxQueryLength": 8,
-        #         "caseSensitive": False,
-        #         "diacriticSensitive": False,
-        #         "strMaxLength": 300
-        #     } ]
-        # },
+        {
+            "path": "notes",
+            "bsonType": "string",
+            "queries": [ {
+                "queryType": "substringPreview",  # substring queryable
+                "strMinQueryLength": 3,
+                "strMaxQueryLength": 8,
+                "caseSensitive": False,
+                "diacriticSensitive": False,
+                "strMaxLength": 300
+            } ]
+        },
     ]
 }
 
@@ -250,6 +250,16 @@ def search():
             }
         )
 
+    notes = request.args.get('notes', '').strip()
+    if len(notes) >= 3:
+        AND.append(
+            {
+                "$encStrContains": {
+                    "input": "$notes",
+                    "substring": notes
+                }
+            }
+        )
 
     if len(AND) < 1:
         return {}
