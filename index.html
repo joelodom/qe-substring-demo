@@ -2,14 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- Prevent caching of this page and stylesheet -->
+  <!-- Prevent caching -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hospital Customer Service</title>
-  <!-- Versioned stylesheet to bust cache -->
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -17,9 +16,9 @@
     <h1>Hospital Customer Service Application</h1>
   </header>
   <main style="display: flex; gap: 20px; max-width: 1000px; margin: 20px auto;">
-  <form id="add-patient-form" action="/add-patient" method="post" autocomplete="off">
+    <section id="add-patient" style="flex: 1.2;">
       <h2>Add New Patient</h2>
-      <form id="add-patient-form" action="#" method="post" autocomplete="off">
+      <form id="add-patient-form" action="/add-patient" method="post" autocomplete="off">
         <div>
           <label>First Name:</label>
           <input type="text" id="first-name" name="firstName" required autocomplete="off">
@@ -41,9 +40,9 @@
         </div>
       </form>
     </section>
-  <form id="search-patient-form" action="/search" method="get" autocomplete="off">
+    <section id="search-patient" style="flex: 1.2;">
       <h2>Search Patients</h2>
-      <form id="search-patient-form" action="#" method="get" autocomplete="off">
+      <form id="search-patient-form" autocomplete="off">
         <div>
           <label>First Name:</label>
           <input type="text" id="search-first-name" name="firstName" autocomplete="off">
@@ -86,67 +85,68 @@
   </section>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Validation for Add Patient form
-      document.getElementById('add-patient-form').addEventListener('submit', function(e) {
-        const firstName = document.getElementById('first-name').value.trim();
-        const lastName = document.getElementById('last-name').value.trim();
-        const dob = document.getElementById('dob').value.trim();
-        const zip = document.getElementById('zip').value.trim();
-        const zipRegex = /^\d{5}$/;
-        const dobRegex = /^\d{4}-\d{2}-\d{2}$/;
+    document.addEventListener('DOMContentLoaded', () => {
+      // Add Patient form uses default POST to /add-patient, no changes needed here
 
-        if (!firstName || !lastName || !dob || !zip) {
-          alert('All fields are required.');
-          e.preventDefault();
-          return;
-        }
-        if (!dobRegex.test(dob)) {
-          alert('Date of Birth must be in YYYY-MM-DD format.');
-          e.preventDefault();
-          return;
-        }
-        const dobDate = new Date(dob);
-        const year = dobDate.getFullYear();
-        if (isNaN(dobDate) || year < 1900 || year > 2099) {
-          alert('Birth year must be between 1900 and 2099.');
-          e.preventDefault();
-          return;
-        }
-        if (!zipRegex.test(zip)) {
-          alert('Zip code must be a 5-digit number.');
-          e.preventDefault();
-          return;
-        }
-      });
+      // Handle Search form via AJAX
+      const searchForm = document.getElementById('search-patient-form');
+      const resultsBody = document.querySelector('#results-table tbody');
 
-      // Existing Search validation left unchanged
-      document.getElementById('search-patient-form').addEventListener('submit', function(e) {
-        const firstName = document.getElementById('search-first-name').value.trim();
-        const lastName = document.getElementById('search-last-name').value.trim();
+      searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        // Gather search criteria
+        const params = new URLSearchParams();
+        const fn = document.getElementById('search-first-name').value.trim();
+        const ln = document.getElementById('search-last-name').value.trim();
         const yob = document.getElementById('search-yob').value;
         const zip = document.getElementById('search-zip').value.trim();
-        const zipRegex = /^\d{5}$/;
-        const currentYear = new Date().getFullYear();
 
-        if (!firstName && !lastName && !yob && !zip) {
+        if (fn) params.append('firstName', fn);
+        if (ln) params.append('lastName', ln);
+        if (yob) params.append('yearOfBirth', yob);
+        if (zip) params.append('zipCode', zip);
+
+        // Must have at least one
+        if ([fn, ln, yob, zip].every(val => !val)) {
           alert('Please enter at least one search criterion.');
-          e.preventDefault();
           return;
         }
-        if (yob) {
-          const yobNum = parseInt(yob, 10);
-          if (isNaN(yobNum) || yobNum < 1900 || yobNum > currentYear) {
-            alert('Year of birth must be between 1900 and ' + currentYear + '.');
-            e.preventDefault();
-            return;
-          }
-        }
-        if (zip && !zipRegex.test(zip)) {
-          alert('Zip code must be a 5-digit number.');
-          e.preventDefault();
-          return;
-        }
+
+        fetch('/search?' + params.toString())
+          .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+          })
+          .then(data => {
+            // Clear existing rows
+            resultsBody.innerHTML = '';
+            if (data.length === 0) {
+              const tr = document.createElement('tr');
+              const td = document.createElement('td');
+              td.colSpan = 4;
+              td.textContent = 'No patients found.';
+              td.style.textAlign = 'center';
+              tr.appendChild(td);
+              resultsBody.appendChild(tr);
+              return;
+            }
+            // Populate rows
+            data.forEach(p => {
+              const tr = document.createElement('tr');
+              ['firstName', 'lastName', 'dateOfBirth', 'zipCode'].forEach(key => {
+                const td = document.createElement('td');
+                td.textContent = p[key] || '';
+                td.style.border = '1px solid #ccc';
+                td.style.padding = '8px';
+                tr.appendChild(td);
+              });
+              resultsBody.appendChild(tr);
+            });
+          })
+          .catch(err => {
+            console.error('Fetch error:', err);
+            alert('Error fetching search results.');
+          });
       });
     });
   </script>
