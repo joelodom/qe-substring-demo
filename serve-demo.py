@@ -220,13 +220,13 @@ def search():
             }
         )
 
-    v = request.args.get('yearOfBirth', '').strip()
-    if v.isdigit() and len(v) == 4:
+    yearOfBirth = request.args.get('yearOfBirth', '').strip()
+    if yearOfBirth.isdigit() and len(yearOfBirth) == 4:
         AND.append(
             {
                 "$gte": [
                     "$dateOfBirth",
-                    datetime.strptime(f"{v}-01-01", "%Y-%m-%d")
+                    datetime.strptime(f"{yearOfBirth}-01-01", "%Y-%m-%d")
                 ]
             }
         )
@@ -234,10 +234,22 @@ def search():
             {
                 "$lt": [
                     "$dateOfBirth",
-                    datetime.strptime(f"{int(v) + 1}-01-01", "%Y-%m-%d")
+                    datetime.strptime(f"{int(yearOfBirth) + 1}-01-01", "%Y-%m-%d")
                 ]
             }
         )
+    
+    zipCode = request.args.get('zipCode', '').strip()
+    if len(zipCode) == 5:
+        AND.append(
+            {
+                "$eq": [
+                    "$zipCode",
+                    zipCode
+                ]
+            }
+        )
+
 
     if len(AND) < 1:
         return {}
@@ -258,28 +270,11 @@ def search():
     cursor = ENCRYPTED_CLIENT[DB][COLLECTION].aggregate(PIPELINE)
     docs = []
     for doc in cursor:
+        # Reformat DOB
         doc['dateOfBirth'] = doc['dateOfBirth'].strftime("%Y-%m-%d")
         docs.append(doc)
-    r = jsonify(list(docs))
-    return r
 
-
-
-    query = {}
-
-    v = request.args.get('yearOfBirth', '').strip()
-    if v.isdigit() and len(v) == 4:
-        query['dateOfBirth'] = {'$regex': f'^{v}'}
-    v = request.args.get('zipCode', '').strip()
-    if len(v) == 5:
-        query['zipCode'] = v
-    v = request.args.get('notes', '').strip()
-    if len(v) >= 3:
-        query['notes'] = {'$regex': v, '$options': 'i'}
-    results = list(ENCRYPTED_CLIENT[DB][COLLECTION].find(
-        query, {'__safeContent__': 0, '_id': 0}))
-    print(f"Results: {results}")
-    return jsonify(results)
+    return jsonify(list(docs))
 
 @app.route('/destroy-db', methods=['POST'])
 def destroy_db():
