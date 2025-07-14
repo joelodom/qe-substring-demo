@@ -43,13 +43,13 @@ def add_patient():
         'firstName': request.form.get('firstName', '').strip(),
         'lastName': request.form.get('lastName', '').strip(),
         'dateOfBirth': request.form.get('dateOfBirth', '').strip(),
-        'zipCode': request.form.get('zipCode', '').strip()
+        'zipCode': request.form.get('zipCode', '').strip(),
+        'notes': request.form.get('notes', '').strip()
     }
 
-    # Basic validation
-    if not all(data.values()):
+    # Basic validation for required fields
+    if not all([data['firstName'], data['lastName'], data['dateOfBirth'], data['zipCode']]):
         return 'Missing fields', 400
-    
     # Insert into MongoDB
     patients.insert_one(data)
     return redirect(url_for('index'))
@@ -67,6 +67,9 @@ def search():
         query['dateOfBirth'] = {'$regex': f'^{year}'}
     if request.args.get('zipCode'):
         query['zipCode'] = request.args['zipCode']
+    if request.args.get('notes'):
+        query['notes'] = {'$regex': request.args['notes'], '$options': 'i'}
+
     results = list(patients.find(query, {'_id': 0}))
     return jsonify(results)
 

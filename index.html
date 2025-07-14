@@ -36,6 +36,10 @@
           <input type="text" id="zip" name="zipCode" required pattern="\d{5}" title="Please enter a 5-digit zip code." autocomplete="off">
         </div>
         <div>
+          <label>Notes (max 300 chars):</label>
+          <textarea id="notes" name="notes" maxlength="300" rows="4" placeholder="Enter patient notes..." autocomplete="off"></textarea>
+        </div>
+        <div>
           <button type="submit">Add Patient</button>
         </div>
       </form>
@@ -60,6 +64,10 @@
           <input type="text" id="search-zip" name="zipCode" pattern="\d{5}" title="Please enter a 5-digit zip code." autocomplete="off">
         </div>
         <div>
+          <label>Notes Keyword:</label>
+          <input type="text" id="search-notes" name="notes" placeholder="at least 3 characters" autocomplete="off">
+        </div>
+        <div>
           <button type="submit">Search</button>
         </div>
       </form>
@@ -67,15 +75,16 @@
   </main>
 
   <!-- Search Results Section -->
-  <section id="search-results" style="max-width: 1000px; margin: 20px auto;">
+  <section id="search-results">
     <h2>Search Results</h2>
-    <table id="results-table" style="width: 100%; border-collapse: collapse;">
+    <table id="results-table">
       <thead>
         <tr>
-          <th style="border: 1px solid #ccc; padding: 8px;">First Name</th>
-          <th style="border: 1px solid #ccc; padding: 8px;">Last Name</th>
-          <th style="border: 1px solid #ccc; padding: 8px;">Date of Birth</th>
-          <th style="border: 1px solid #ccc; padding: 8px;">Zip Code</th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Date of Birth</th>
+          <th>Zip Code</th>
+          <th>Notes</th>
         </tr>
       </thead>
       <tbody>
@@ -86,72 +95,74 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const searchForm = document.getElementById('search-patient-form');
+      const searchFields = ['search-first-name', 'search-last-name', 'search-yob', 'search-zip', 'search-notes'];
       const resultsBody = document.querySelector('#results-table tbody');
       let debounceTimer;
 
-      // Core search execution
+      // Execute search/autocomplete
       const executeSearch = () => {
-        const fn = document.getElementById('search-first-name').value.trim();
-        const ln = document.getElementById('search-last-name').value.trim();
-        const yob = document.getElementById('search-yob').value.trim();
-        const zip = document.getElementById('search-zip').value.trim();
-
-        // Criteria: first or last name >=3 chars, or full DOB or full zip
         const criteria = {};
+        const fn = document.getElementById('search-first-name').value.trim();
         if (fn.length >= 3) criteria.firstName = fn;
+        const ln = document.getElementById('search-last-name').value.trim();
         if (ln.length >= 3) criteria.lastName = ln;
-        if (/^\d{4}-\d{2}-\d{2}$/.test(document.getElementById('dob').value)) {
-          // For autocomplete, include date of birth if fully entered in add form
-          criteria.dateOfBirth = document.getElementById('dob').value.trim();
-        }
-        if (zip.length === 5) criteria.zipCode = zip;
-        if (yob.length === 4) criteria.yearOfBirth = yob;
+        const yob = document.getElementById('search-yob').value.trim();
+        if (/^\d{4}$/.test(yob)) criteria.yearOfBirth = yob;
+        const zip = document.getElementById('search-zip').value.trim();
+        if (/^\d{5}$/.test(zip)) criteria.zipCode = zip;
+        const notesKey = document.getElementById('search-notes').value.trim();
+        if (notesKey.length >= 3) criteria.notes = notesKey;
 
-        // Must have at least one
         if (Object.keys(criteria).length === 0) {
           resultsBody.innerHTML = '';
           return;
         }
-
-        const params = new URLSearchParams();
-        Object.entries(criteria).forEach(([key, val]) => params.append(key, val));
-
+        const params = new URLSearchParams(criteria);
         fetch('/search?' + params.toString())
-          .then(res => res.ok ? res.json() : Promise.reject('Network response not ok'))
+          .then(res => res.ok ? res.json() : Promise.reject('Network error'))
           .then(data => {
             resultsBody.innerHTML = '';
-            if (!data.length) {
+            if (data.length === 0) {
               const tr = document.createElement('tr');
               const td = document.createElement('td');
-              td.colSpan = 4; td.textContent = 'No patients found.'; td.style.textAlign = 'center';
-              tr.appendChild(td); resultsBody.appendChild(tr);
-              return;
-            }
-            data.forEach(p => {
-              const tr = document.createElement('tr');
-              ['firstName','lastName','dateOfBirth','zipCode'].forEach(key => {
-                const td = document.createElement('td');
-                td.textContent = p[key] || '';
-                td.style.border = '1px solid #ccc'; td.style.padding = '8px';
-                tr.appendChild(td);
-              });
+              td.colSpan = 5; td.textContent = 'No patients found.'; td.style.textAlign = 'center';
+              tr.appendChild(td);
               resultsBody.appendChild(tr);
-            });
+            } else {
+              data.forEach(p => {
+                const tr = document.createElement('tr');
+                ['firstName','lastName','dateOfBirth','zipCode'].forEach(key => {
+                  const td = document.createElement('td'); td.textContent = p[key] || '';
+                  tr.appendChild(td);
+                });
+                // Notes link
+                const notesTd = document.createElement('td');
+                const link = document.createElement('a');
+                link.href = '#';
+                link.textContent = 'View Notes';
+                link.addEventListener('click', e => {
+                  e.preventDefault();
+                  alert(p.notes || '');
+                });
+                notesTd.appendChild(link);
+                tr.appendChild(notesTd);
+                resultsBody.appendChild(tr);
+              });
+            }
           })
-          .catch(err => console.error('Autocomplete error:', err));
+          .catch(err => console.error('Search error:', err));
       };
 
-      // Attach input listeners with debounce
-      ['search-first-name','search-last-name','search-yob','search-zip'].forEach(id => {
+      // Attach debounce listeners
+      searchFields.forEach(id => {
         document.getElementById(id).addEventListener('input', () => {
           clearTimeout(debounceTimer);
           debounceTimer = setTimeout(executeSearch, 300);
         });
       });
 
-      // Keep form submit for explicit search
-      searchForm.addEventListener('submit', e => {
+      // Explicit search on submit
+      document.getElementById('search-patient-form').addEventListener('submit', e => {
         e.preventDefault();
         executeSearch();
       });

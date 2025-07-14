@@ -7,6 +7,7 @@
   padding: 0;
 }
 
+/* Body styling */
 body {
   font-family: Arial, sans-serif;
   background-color: #f4f7f8;
@@ -15,22 +16,25 @@ body {
   padding: 20px;
 }
 
+/* Header styling */
 header {
   background-color: #4CAF50;
   color: #fff;
   padding: 20px;
   text-align: center;
   border-radius: 5px;
+  margin-bottom: 20px;
 }
 
+/* Main layout */
 main {
   display: flex;
   gap: 20px;
   max-width: 1000px;
-  margin: 20px auto;
+  margin: 0 auto;
 }
 
-/* Panels styling */
+/* Panel styling */
 #add-patient,
 #search-patient {
   flex: 1.2;
@@ -41,7 +45,7 @@ main {
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Distinct background colors */
+/* Distinct panel backgrounds */
 #add-patient {
   background-color: #e8f5e9;
 }
@@ -50,36 +54,32 @@ main {
   background-color: #e3f2fd;
 }
 
-section {
-  margin-bottom: 0; /* panels already spaced by gap */
-}
-
-h2 {
-  margin-bottom: 10px;
-  color: #333;
-}
-
+/* Form element spacing */
 form div {
   margin-bottom: 15px;
 }
 
+/* Label styling */
 label {
   display: block;
   margin-bottom: 5px;
   font-weight: bold;
 }
 
-/* Slightly larger text in inputs for better readability */
+/* Input and textarea styling */
 input[type="text"],
+input[type="number"],
 input[type="date"],
-input[type="number"] {
+textarea {
   width: 100%;
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1.1rem;
+  resize: vertical;
 }
 
+/* Button styling */
 button {
   background-color: #4CAF50;
   color: #fff;
@@ -94,14 +94,15 @@ button:hover {
   background-color: #45a049;
 }
 
-/* Enhanced search results styling */
+/* Search Results styling */
 #search-results {
+  max-width: 1000px;
+  margin: 20px auto;
   background-color: #fff;
   border: 1px solid #ccc;
   border-radius: 5px;
   padding: 20px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  margin-top: 40px;
 }
 
 #results-table {
