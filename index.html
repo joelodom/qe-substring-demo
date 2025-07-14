@@ -13,64 +13,67 @@
 </head>
 <body>
   <!-- Admin Bar -->
-  <div id="admin-bar" style="background:#eee; padding:10px; text-align:right; border-bottom:1px solid #ccc;">
+  <div id="admin-bar">
     <button id="destroy-db">Destroy Database</button>
+    <button id="load-sample">Load Sample Data</button>
   </div>
 
   <header>
     <h1>Springfield General Hospital Patient Search</h1>
   </header>
-  <main style="display: flex; gap: 20px; max-width: 1000px; margin: 20px auto;">
-    <section id="add-patient" style="flex: 1.2;">
+
+  <main>
+    <section id="add-patient">
       <h2>Add New Patient</h2>
       <form id="add-patient-form" action="/add-patient" method="post" autocomplete="off">
         <div>
           <label>First Name:</label>
-          <input type="text" id="first-name" name="firstName" required autocomplete="off">
+          <input type="text" id="first-name" name="firstName" required>
         </div>
         <div>
           <label>Last Name:</label>
-          <input type="text" id="last-name" name="lastName" required autocomplete="off">
+          <input type="text" id="last-name" name="lastName" required>
         </div>
         <div>
           <label>Date of Birth (YYYY-MM-DD):</label>
-          <input type="text" id="dob" name="dateOfBirth" required placeholder="e.g. 1985-04-23" autocomplete="off">
+          <input type="text" id="dob" name="dateOfBirth" required placeholder="e.g. 1985-04-23">
         </div>
         <div>
           <label>Zip Code:</label>
-          <input type="text" id="zip" name="zipCode" required pattern="\d{5}" title="Please enter a 5-digit zip code." autocomplete="off">
+          <input type="text" id="zip" name="zipCode" required pattern="\d{5}" title="Please enter a 5-digit zip code.">
         </div>
         <div>
           <label>Notes (max 300 chars):</label>
-          <textarea id="notes" name="notes" maxlength="300" rows="4" placeholder="Enter patient notes..." autocomplete="off"></textarea>
+          <textarea id="notes" name="notes" maxlength="300" rows="4" placeholder="Enter patient notes..."></textarea>
         </div>
         <div>
           <button type="submit">Add Patient</button>
         </div>
       </form>
     </section>
-    <section id="search-patient" style="flex: 1.2;">
+
+    <section id="search-patient">
       <h2>Search Patients</h2>
       <form id="search-patient-form" autocomplete="off">
         <div>
           <label>First Name:</label>
-          <input type="text" id="search-first-name" name="firstName" autocomplete="off">
+          <input type="text" id="search-first-name" name="firstName">
         </div>
         <div>
           <label>Last Name:</label>
-          <input type="text" id="search-last-name" name="lastName" autocomplete="off">
+          <input type="text" id="search-last-name" name="lastName">
         </div>
         <div>
           <label>Year of Birth:</label>
-          <input type="number" id="search-yob" name="yearOfBirth" min="1900" max="2099" autocomplete="off">
+          <input type="number" id="search-yob" name="yearOfBirth" min="1900" max="2099">
         </div>
         <div>
           <label>Zip Code:</label>
-          <input type="text" id="search-zip" name="zipCode" pattern="\d{5}" title="Please enter a 5-digit zip code." autocomplete="off">
+          <input type="text" id="search-zip" name="zipCode" pattern="\d{5}" title="Please enter a 5-digit zip code.">
         </div>
         <div>
           <label>Notes Keyword:</label>
-          <input type="text" id="search-notes" name="notes" placeholder="at least 3 characters" autocomplete="off">
+          <input type="text" id="search-notes" name="notes" placeholder="at least 3 characters">
         </div>
         <div>
           <button type="submit">Search</button>
@@ -115,11 +118,25 @@
           });
       });
 
+      // Load Sample Data button
+      document.getElementById('load-sample').addEventListener('click', () => {
+        if (!confirm('This will replace all records with sample data. Continue?')) return;
+        fetch('/load-sample', { method: 'POST' })
+          .then(res => {
+            if (!res.ok) throw new Error('Failed to load sample data');
+            alert('Sample data loaded successfully.');
+            window.location.reload();
+          })
+          .catch(err => {
+            console.error(err);
+            alert('Error loading sample data.');
+          });
+      });
+
       const searchFields = ['search-first-name', 'search-last-name', 'search-yob', 'search-zip', 'search-notes'];
       const resultsBody = document.querySelector('#results-table tbody');
       let debounceTimer;
 
-      // Execute search/autocomplete
       const executeSearch = () => {
         const criteria = {};
         const fn = document.getElementById('search-first-name').value.trim();
@@ -151,14 +168,12 @@
             } else {
               data.forEach(p => {
                 const tr = document.createElement('tr');
-                ['firstName','lastName','dateOfBirth','zipCode'].forEach(key => {
+                ['firstName', 'lastName', 'dateOfBirth', 'zipCode'].forEach(key => {
                   const td = document.createElement('td'); td.textContent = p[key] || '';
                   tr.appendChild(td);
                 });
                 const notesTd = document.createElement('td');
-                const link = document.createElement('a');
-                link.href = '#';
-                link.textContent = 'View Notes';
+                const link = document.createElement('a'); link.href = '#'; link.textContent = 'View Notes';
                 link.addEventListener('click', e => {
                   e.preventDefault();
                   alert(p.notes || '');
