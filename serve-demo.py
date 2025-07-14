@@ -3,23 +3,19 @@ from flask import Flask, request, send_from_directory, redirect, url_for, jsonif
 from pymongo import MongoClient
 import os
 
-# Tuneables
-MONGO_URI = 'mongodb://localhost:27017/'
-PORT = 3141
+# Configuration
+db_uri = os.environ.get('MONGO_URI', 'mongodb://localhost:27017/')
+db_name = os.environ.get('DB_NAME', 'substringHospital')
+collection_name = os.environ.get('COLLECTION', 'patients')
+port = int(os.environ.get('PORT', 3141))
 
-# Probably don't tune
-DATABASE = "substringHospital"
-COLLECTION = "patients"
-
-# Flask app to serve static files and handle MongoDB operations
+# Initialize Flask and MongoDB
 app = Flask(__name__, static_folder='.', static_url_path='')
+client = MongoClient(db_uri)
+db = client[db_name]
+patients = db[collection_name]
 
-# Connect to local MongoDB
-client = MongoClient(MONGO_URI)
-db = client[DATABASE]
-patients = db[COLLECTION]
-
-# Prevent caching for all responses
+# Disable caching on responses
 def nocache(response):
     response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     response.headers['Pragma'] = 'no-cache'
@@ -27,7 +23,7 @@ def nocache(response):
     return response
 app.after_request(nocache)
 
-# Serve HTML and CSS
+# Serve static files
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -36,7 +32,7 @@ def index():
 def css():
     return send_from_directory('.', 'styles.css')
 
-# Handle new patient submissions
+# Add patient endpoint
 @app.route('/add-patient', methods=['POST'])
 def add_patient():
     data = {
@@ -46,33 +42,40 @@ def add_patient():
         'zipCode': request.form.get('zipCode', '').strip(),
         'notes': request.form.get('notes', '').strip()
     }
-
-    # Basic validation for required fields
+    # Validate required fields
     if not all([data['firstName'], data['lastName'], data['dateOfBirth'], data['zipCode']]):
-        return 'Missing fields', 400
-    # Insert into MongoDB
+        return 'Missing required fields', 400
     patients.insert_one(data)
     return redirect(url_for('index'))
 
-# API endpoint to search patients
+# Search endpoint
 @app.route('/search', methods=['GET'])
 def search():
     query = {}
-    if request.args.get('firstName'):
-        query['firstName'] = {'$regex': request.args['firstName'], '$options': 'i'}
-    if request.args.get('lastName'):
-        query['lastName'] = {'$regex': request.args['lastName'], '$options': 'i'}
-    if request.args.get('yearOfBirth'):
-        year = request.args['yearOfBirth']
-        query['dateOfBirth'] = {'$regex': f'^{year}'}
-    if request.args.get('zipCode'):
-        query['zipCode'] = request.args['zipCode']
-    if request.args.get('notes'):
-        query['notes'] = {'$regex': request.args['notes'], '$options': 'i'}
-
+    if v := request.args.get('firstName'):
+        if len(v) >= 3:
+            query['firstName'] = {'$regex': v, '$options': 'i'}
+    if v := request.args.get('lastName'):
+        if len(v) >= 3:
+            query['lastName'] = {'$regex': v, '$options': 'i'}
+    if v := request.args.get('yearOfBirth'):
+        if v.isdigit() and len(v) == 4:
+            query['dateOfBirth'] = {'$regex': f'^{v}'}
+    if v := request.args.get('zipCode'):
+        if len(v) == 5:
+            query['zipCode'] = v
+    if v := request.args.get('notes'):
+        if len(v) >= 3:
+            query['notes'] = {'$regex': v, '$options': 'i'}
     results = list(patients.find(query, {'_id': 0}))
     return jsonify(results)
 
+# Destroy database endpoint
+@app.route('/destroy-db', methods=['POST'])
+def destroy_db():
+    # Drop the entire database
+    client.drop_database(db_name)
+    return 'Database dropped', 200
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', PORT))
     app.run(host='0.0.0.0', port=port, debug=True)

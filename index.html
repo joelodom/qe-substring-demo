@@ -12,6 +12,11 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Admin Bar -->
+  <div id="admin-bar" style="background:#eee; padding:10px; text-align:right; border-bottom:1px solid #ccc;">
+    <button id="destroy-db">Destroy Database</button>
+  </div>
+
   <header>
     <h1>Springfield General Hospital Patient Search</h1>
   </header>
@@ -95,6 +100,21 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+      // Destroy Database button
+      document.getElementById('destroy-db').addEventListener('click', () => {
+        if (!confirm('Are you sure you want to destroy the entire database? This cannot be undone.')) return;
+        fetch('/destroy-db', { method: 'POST' })
+          .then(res => {
+            if (!res.ok) throw new Error('Failed to destroy database');
+            alert('Database successfully destroyed.');
+            window.location.reload();
+          })
+          .catch(err => {
+            console.error(err);
+            alert('Error destroying database. Check server logs.');
+          });
+      });
+
       const searchFields = ['search-first-name', 'search-last-name', 'search-yob', 'search-zip', 'search-notes'];
       const resultsBody = document.querySelector('#results-table tbody');
       let debounceTimer;
@@ -135,7 +155,6 @@
                   const td = document.createElement('td'); td.textContent = p[key] || '';
                   tr.appendChild(td);
                 });
-                // Notes link
                 const notesTd = document.createElement('td');
                 const link = document.createElement('a');
                 link.href = '#';
