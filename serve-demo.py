@@ -66,26 +66,26 @@ ENCRYPTED_FIELDS_MAP = {
                 "diacriticSensitive": False,
             } ]
         },
-        # {
-        #     "path": "lastName",
-        #     "bsonType": "string",
-        #     "queries": [ {
-        #         "queryType": "prefixPreview",  # prefix queryable
-        #         "strMinQueryLength": 3,
-        #         "strMaxQueryLength": 8,
-        #         "caseSensitive": False,
-        #         "diacriticSensitive": False,
-        #     } ]
-        # },
-        # {
-        #     "path": "dateOfBirth",
-        #     "bsonType": "date",
-        #     "queries": [ {
-        #         "queryType": "range",  # range queryable
-        #         "min": datetime(1900, 1, 1),
-        #         "max": datetime(2099, 12, 31)
-        #     } ]
-        # },
+        {
+            "path": "lastName",
+            "bsonType": "string",
+            "queries": [ {
+                "queryType": "prefixPreview",  # prefix queryable
+                "strMinQueryLength": 3,
+                "strMaxQueryLength": 8,
+                "caseSensitive": False,
+                "diacriticSensitive": False,
+            } ]
+        },
+        {
+            "path": "dateOfBirth",
+            "bsonType": "date",
+            "queries": [ {
+                "queryType": "range",  # range queryable
+                "min": datetime(1900, 1, 1),
+                "max": datetime(2099, 12, 31)
+            } ]
+        },
         {
             "path": "zipCode",
             "bsonType": "string",
@@ -172,6 +172,8 @@ def load_sample():
     
     # Replace existing
     print("Inserting sample data...")
+    for d in docs:
+        d['dateOfBirth'] = datetime.strptime(d['dateOfBirth'], "%Y-%m-%d")
     ENCRYPTED_CLIENT[DB][COLLECTION].insert_many(docs)
     return 'Sample data loaded', 200
 
@@ -180,7 +182,7 @@ def add_patient():
     data = {
         'firstName': request.form.get('firstName', '').strip(),
         'lastName': request.form.get('lastName', '').strip(),
-        'dateOfBirth': request.form.get('dateOfBirth', '').strip(),
+        'dateOfBirth': datetime.strptime(request.form.get('dateOfBirth', '').strip(), "%Y-%m-%d"),
         'zipCode': request.form.get('zipCode', '').strip(),
         'notes': request.form.get('notes', '').strip()
     }
@@ -194,41 +196,77 @@ def add_patient():
 def search():
     print("Searching...")
 
-
-
-    #
-    # First name prefix search
-    #
+    AND = []
 
     firstName = request.args.get('firstName', '').strip()
     if len(firstName) >= 3:
-        PIPELINE = [
+        AND.append(
             {
-                "$match": {
-                    "$expr": {
-                        "$encStrStartsWith": {
-                            "input": "$firstName",
-                            "prefix": firstName
-                        }
-                    }
+                "$encStrStartsWith": {
+                    "input": "$firstName",
+                    "prefix": firstName
                 }
-            },
-            {
-                "$project": { "_id": 0, "__safeContent__": 0 }
             }
-        ]
+        )
 
-        cursor = ENCRYPTED_CLIENT[DB][COLLECTION].aggregate(PIPELINE)
-        r = jsonify(list(cursor))
-        return r
+    lastName = request.args.get('lastName', '').strip()
+    if len(lastName) >= 3:
+        AND.append(
+            {
+                "$encStrStartsWith": {
+                    "input": "$lastName",
+                    "prefix": lastName
+                }
+            }
+        )
+
+    v = request.args.get('yearOfBirth', '').strip()
+    if v.isdigit() and len(v) == 4:
+        AND.append(
+            {
+                "$gte": [
+                    "$dateOfBirth",
+                    datetime.strptime(f"{v}-01-01", "%Y-%m-%d")
+                ]
+            }
+        )
+        AND.append(
+            {
+                "$lt": [
+                    "$dateOfBirth",
+                    datetime.strptime(f"{int(v) + 1}-01-01", "%Y-%m-%d")
+                ]
+            }
+        )
+
+    if len(AND) < 1:
+        return {}
+
+    PIPELINE = [
+        {
+            "$match": {
+                "$expr": {
+                    "$and": AND
+                }
+            }
+        },
+        {
+            "$project": { "_id": 0, "__safeContent__": 0 }
+        }
+    ]
+
+    cursor = ENCRYPTED_CLIENT[DB][COLLECTION].aggregate(PIPELINE)
+    docs = []
+    for doc in cursor:
+        doc['dateOfBirth'] = doc['dateOfBirth'].strftime("%Y-%m-%d")
+        docs.append(doc)
+    r = jsonify(list(docs))
+    return r
 
 
 
     query = {}
 
-    v = request.args.get('lastName', '').strip()
-    if len(v) >= 3:
-        query['lastName'] = {'$regex': v, '$options': 'i'}
     v = request.args.get('yearOfBirth', '').strip()
     if v.isdigit() and len(v) == 4:
         query['dateOfBirth'] = {'$regex': f'^{v}'}
