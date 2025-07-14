@@ -31,8 +31,8 @@ main {
 }
 
 /* Panels styling */
-#add-patient,
-#search-patient {
+#add-patient-form,
+#search-patient-form {
   flex: 1.2;
   background-color: #fff;
   border: 1px solid #ccc;
@@ -42,11 +42,11 @@ main {
 }
 
 /* Distinct background colors */
-#add-patient {
+#add-patient-form {
   background-color: #e8f5e9;
 }
 
-#search-patient {
+#search-patient-form {
   background-color: #e3f2fd;
 }
 
