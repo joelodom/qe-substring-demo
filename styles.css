@@ -31,8 +31,8 @@ main {
 }
 
 /* Panels styling */
-#add-patient-form,
-#search-patient-form {
+#add-patient,
+#search-patient {
   flex: 1.2;
   background-color: #fff;
   border: 1px solid #ccc;
@@ -42,11 +42,11 @@ main {
 }
 
 /* Distinct background colors */
-#add-patient-form {
+#add-patient {
   background-color: #e8f5e9;
 }
 
-#search-patient-form {
+#search-patient {
   background-color: #e3f2fd;
 }
 
@@ -69,7 +69,7 @@ label {
   font-weight: bold;
 }
 
-/* Slightly larger text in inputs for readability */
+/* Slightly larger text in inputs for better readability */
 input[type="text"],
 input[type="date"],
 input[type="number"] {
@@ -77,18 +77,61 @@ input[type="number"] {
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 1rem;
+  font-size: 1.1rem;
 }
 
 button {
   background-color: #4CAF50;
   color: #fff;
   border: none;
-  padding: 10px 15px;
+  padding: 12px 18px;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 1.1rem;
 }
 
 button:hover {
   background-color: #45a049;
+}
+
+/* Enhanced search results styling */
+#search-results {
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 20px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-top: 40px;
+}
+
+#results-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+#results-table th {
+  background-color: #4CAF50;
+  color: #fff;
+  text-align: left;
+  padding: 12px;
+}
+
+#results-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+#results-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+#results-table tr:hover {
+  background-color: #f1f1f1;
+}
+
+#results-table td[colspan] {
+  text-align: center;
+  padding: 20px;
+  color: #666;
 }
