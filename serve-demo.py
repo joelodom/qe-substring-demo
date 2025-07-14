@@ -9,7 +9,7 @@ from bson.codec_options import CodecOptions
 from bson.binary import STANDARD
 
 #
-# Configuration (env vars overridable)
+# Configuration
 #
 
 PORT = 3141
@@ -26,11 +26,9 @@ KEY_VAULT_DB = "encryption"
 KEY_VAULT_COLL = "__keyVault"
 KEY_VAULT_NAMESPACE = f"{KEY_VAULT_DB}.{KEY_VAULT_COLL}"
 
-#############
 #
-# MongoDB Queryable Encryption
+# MongoDB Setup
 #
-#############
 
 # 96 random hardcoded bytes, because it's only an example
 MASTER_KEY = "V2hlbiB0aGUgY2F0J3MgYXdheSwgdGhlIG1pY2Ugd2lsbCBwbGF5LCBidXQgd2hlbiB0aGUgZG9nIGlzIGFyb3VuZCwgdGhlIGNhdCBiZWNvbWVzIGEgbmluamEuLi4u"
@@ -53,6 +51,7 @@ AUTO_ENCRYPTION_OPTS = AutoEncryptionOpts(
 ENCRYPTED_CLIENT = MongoClient(
     MONGO_URI, auto_encryption_opts=AUTO_ENCRYPTION_OPTS)
 
+# What to encrypt and with what search types
 ENCRYPTED_FIELDS_MAP = {
     "fields": [
         {
@@ -115,8 +114,10 @@ CLIENT_ENCRYPTION = ClientEncryption(
 
 MASTER_KEY_CREDS = {}  # no creds because using a local key CMK
 
-
+#
 # Flask setup
+#
+
 app = Flask(__name__, static_folder='.', static_url_path='')
 
 # Disable caching for all responses
@@ -150,7 +151,12 @@ def sample_data():
 
 @app.route('/load-sample', methods=['POST'])
 def load_sample():
+    # First destroy the old database
     destroy_db()
+
+    #
+    # Create the encrypted collection and add sample data
+    #
 
     print("Creating collection...")
     CLIENT_ENCRYPTION.create_encrypted_collection(
@@ -194,6 +200,11 @@ def add_patient():
 
 @app.route('/search', methods=['GET'])
 def search():
+
+    #
+    # Create a compound $expr for searching
+    #
+
     print("Searching...")
 
     AND = []

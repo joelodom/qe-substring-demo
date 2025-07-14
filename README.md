@@ -1,6 +1,7 @@
 # Springfield General Hospital Patient Search
 
-**A simple hospital customer service web application** built with Flask and MongoDB that lets you add new patients, search existing records, and manage sample data.
+**A simple hospital customer service web application** built with Flask and MongoDB that lets you add new patients, search existing records, and manage sample data. This application demonstrates
+Queryable Encrypton substring, prefix, range and equality searches in the same application.
 
 ## Features
 
