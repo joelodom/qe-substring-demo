@@ -22,7 +22,7 @@ COLLECTION = 'patients'
 
 KEY_PROVIDER = "local"
 
-KEY_VAULT_DB = "encryption"
+KEY_VAULT_DB = "keyVault"
 KEY_VAULT_COLL = "__keyVault"
 KEY_VAULT_NAMESPACE = f"{KEY_VAULT_DB}.{KEY_VAULT_COLL}"
 
