@@ -177,10 +177,19 @@ def load_sample():
         return f'Error reading sample file: {e}', 500
     
     # Replace existing
+    
     print("Inserting sample data...")
     for d in docs:
         d['dateOfBirth'] = datetime.strptime(d['dateOfBirth'], "%Y-%m-%d")
-    ENCRYPTED_CLIENT[DB][COLLECTION].insert_many(docs)
+    
+    BATCH_SIZE = 50
+    inserted = 0
+
+    while inserted < len(docs):
+        ENCRYPTED_CLIENT[DB][COLLECTION].insert_many(
+            docs[inserted : inserted + BATCH_SIZE])
+        inserted += BATCH_SIZE
+    
     return 'Sample data loaded', 200
 
 @app.route('/add-patient', methods=['POST'])
@@ -301,7 +310,7 @@ def search():
 def destroy_db():
     print("Dropping database...")
     ENCRYPTED_CLIENT.drop_database(DB)
-    # TODO: Drop keyvault here
+    # TODO: Drop keyvault here BUT not if I have other demonstrations using it
     return 'Database dropped', 200
 
 if __name__ == '__main__':
