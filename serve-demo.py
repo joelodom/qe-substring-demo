@@ -39,7 +39,7 @@ KMS_CREDS = {
     },
 }
 
-CRYPT_SHARED_LIB = "/Users/joel.odom/mongo_crypt_shared_v1-8.2.0-alpha-2632-g9217e56/lib/mongo_crypt_v1.dylib"
+CRYPT_SHARED_LIB = "/Users/joel.odom/Downloads/mongo_crypt_shared_v1-8.3.0-alpha0-477-g8229f2a/lib/mongo_crypt_v1.dylib"
 os.environ["MONGOCRYPT_SHARED_LIB_PATH"] = CRYPT_SHARED_LIB
 
 AUTO_ENCRYPTION_OPTS = AutoEncryptionOpts(
