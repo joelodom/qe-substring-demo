@@ -7,6 +7,8 @@ from pymongo.encryption_options import AutoEncryptionOpts
 from pymongo.encryption import ClientEncryption
 from bson.codec_options import CodecOptions
 from bson.binary import STANDARD
+from faker import Faker
+import random
 
 #
 # Configuration
@@ -308,10 +310,37 @@ def search():
 
 @app.route('/destroy-db', methods=['POST'])
 def destroy_db():
+    return 'Safety is in place', 500
+
+
     print("Dropping database...")
     ENCRYPTED_CLIENT.drop_database(DB)
     # TODO: Drop keyvault here BUT not if I have other demonstrations using it
     return 'Database dropped', 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT, debug=True)
+    #
+    # Scratchpad code to add a bunch of fake data
+    #
+
+    ADD_FAKE_DATA = True
+    added = 0
+
+    while ADD_FAKE_DATA:
+        fake = Faker()
+
+        data = {
+            'firstName': fake.first_name(),
+            'lastName': fake.last_name(),
+            'dateOfBirth': datetime.combine(fake.date_of_birth(), datetime.min.time()),
+            'zipCode': fake.zipcode(),
+            'notes': ""
+        }
+
+        ENCRYPTED_CLIENT[DB][COLLECTION].insert_one(data)
+
+        added += 1
+        print(f"Added {added} records so far.")
+
+    else:
+        app.run(host='0.0.0.0', port=PORT, debug=True)
