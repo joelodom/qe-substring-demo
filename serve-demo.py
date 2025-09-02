@@ -348,13 +348,14 @@ if __name__ == '__main__':
     # Scratchpad code to add a bunch of fake data
     #
 
-    ADD_FAKE_DATA = False
+    ADD_FAKE_DATA = True
     added = 0
 
     while ADD_FAKE_DATA:
         fake = Faker()
 
-        BATCH_SIZE = 200
+        BATCH_SIZE = 50
+        COMPACT_EVERY = 1000
 
         docs = []
         for i in range(0, BATCH_SIZE):
@@ -372,6 +373,11 @@ if __name__ == '__main__':
 
         added += BATCH_SIZE
         print(f"Added {added} records so far.")
+
+        if added % COMPACT_EVERY == 0:
+            print("SKIPPING Compacting...")
+            #res = ENCRYPTED_CLIENT[DB].command({"compactStructuredEncryptionData": COLLECTION})
+            #print(res)  # {'ok': 1, ... stats ...}
 
     else:
         app.run(host='0.0.0.0', port=PORT, debug=True)
