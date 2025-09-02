@@ -93,6 +93,17 @@ ENCRYPTED_FIELDS_MAP = {
             "queries": [ {"queryType": "equality"} ]  # equality queryable
         },
         {
+            "path": "ssn",
+            "bsonType": "string",
+            "queries": [ {
+                "queryType": "suffixPreview",  # suffix queryable
+                "strMinQueryLength": 4,
+                "strMaxQueryLength": 4,
+                "caseSensitive": True,
+                "diacriticSensitive": True,
+            } ]
+        },
+        {
             "path": "notes",
             "bsonType": "string",
             "queries": [ {
@@ -101,7 +112,7 @@ ENCRYPTED_FIELDS_MAP = {
                 "strMaxQueryLength": 8,
                 "caseSensitive": False,
                 "diacriticSensitive": False,
-                "strMaxLength": 300
+                "strMaxLength": 60
             } ]
         },
     ]
@@ -183,6 +194,8 @@ def load_sample():
     print("Inserting sample data...")
     for d in docs:
         d['dateOfBirth'] = datetime.strptime(d['dateOfBirth'], "%Y-%m-%d")
+        d["ssn"] = "000-00-0000"  # Not in the sample file
+        d["notes"] = d["notes"][:60]
     
     BATCH_SIZE = 50
     inserted = 0
@@ -201,10 +214,11 @@ def add_patient():
         'lastName': request.form.get('lastName', '').strip(),
         'dateOfBirth': datetime.strptime(request.form.get('dateOfBirth', '').strip(), "%Y-%m-%d"),
         'zipCode': request.form.get('zipCode', '').strip(),
+        'ssn': request.form.get('ssn', '').strip(),
         'notes': request.form.get('notes', '').strip()
     }
     # Validate required fields
-    if not all([data['firstName'], data['lastName'], data['dateOfBirth'], data['zipCode']]):
+    if not all([data['firstName'], data['lastName'], data['dateOfBirth'], data['zipCode'], data['ssn']]):
         return 'Missing required fields', 400
     ENCRYPTED_CLIENT[DB][COLLECTION].insert_one(data)
     return redirect(url_for('index'))
@@ -272,6 +286,17 @@ def search():
             }
         )
 
+    ssn = request.args.get('ssn', '').strip()
+    if len(ssn) == 4:
+        AND.append(
+            {
+                "$encStrEndsWith": {
+                    "input": "$ssn",
+                    "suffix": ssn
+                }
+            }
+        )
+
     notes = request.args.get('notes', '').strip()
     if len(notes) >= 3:
         AND.append(
@@ -310,7 +335,7 @@ def search():
 
 @app.route('/destroy-db', methods=['POST'])
 def destroy_db():
-    return 'Safety is in place', 500
+    #return 'Safety is in place', 500
 
 
     print("Dropping database...")
@@ -323,13 +348,13 @@ if __name__ == '__main__':
     # Scratchpad code to add a bunch of fake data
     #
 
-    ADD_FAKE_DATA = True
+    ADD_FAKE_DATA = False
     added = 0
 
     while ADD_FAKE_DATA:
         fake = Faker()
 
-        BATCH_SIZE = 100
+        BATCH_SIZE = 200
 
         docs = []
         for i in range(0, BATCH_SIZE):
@@ -338,6 +363,7 @@ if __name__ == '__main__':
                 'lastName': fake.last_name(),
                 'dateOfBirth': datetime.combine(fake.date_of_birth(), datetime.min.time()),
                 'zipCode': fake.zipcode(),
+                'ssn': fake.ssn(),
                 'notes': ""
             }
             docs.append(data)

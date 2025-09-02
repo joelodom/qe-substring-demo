@@ -43,7 +43,11 @@
           <input type="text" id="zip" name="zipCode" required pattern="\d{5}" title="Please enter a 5-digit zip code.">
         </div>
         <div>
-          <label>Notes (max 300 chars):</label>
+          <label>SSN:</label>
+          <input type="text" id="ssn" name="ssn" title="e.g. 123-45-6789">
+        </div>
+        <div>
+          <label>Notes (max 60 chars):</label>
           <textarea id="notes" name="notes" maxlength="300" rows="4" placeholder="Enter patient notes..."></textarea>
         </div>
         <div>
@@ -70,6 +74,10 @@
         <div>
           <label>Zip Code:</label>
           <input type="text" id="search-zip" name="zipCode" pattern="\d{5}" title="Please enter a 5-digit zip code.">
+        </div>
+        <div>
+          <label>SSN:</label>
+          <input type="text" id="search-ssn" name="ssn" placeholder="last four digits">
         </div>
         <div>
           <label>Notes Keyword:</label>
@@ -133,7 +141,7 @@
           });
       });
 
-      const searchFields = ['search-first-name', 'search-last-name', 'search-yob', 'search-zip', 'search-notes'];
+      const searchFields = ['search-first-name', 'search-last-name', 'search-yob', 'search-zip', 'search-ssn', 'search-notes'];
       const resultsBody = document.querySelector('#results-table tbody');
       let debounceTimer;
 
@@ -147,6 +155,8 @@
         if (/^\d{4}$/.test(yob)) criteria.yearOfBirth = yob;
         const zip = document.getElementById('search-zip').value.trim();
         if (/^\d{5}$/.test(zip)) criteria.zipCode = zip;
+        const ssn = document.getElementById('search-ssn').value.trim();
+        if (ssn.length == 4) criteria.ssn = ssn;
         const notesKey = document.getElementById('search-notes').value.trim();
         if (notesKey.length >= 3) criteria.notes = notesKey;
 
