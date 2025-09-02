@@ -329,17 +329,22 @@ if __name__ == '__main__':
     while ADD_FAKE_DATA:
         fake = Faker()
 
-        data = {
-            'firstName': fake.first_name(),
-            'lastName': fake.last_name(),
-            'dateOfBirth': datetime.combine(fake.date_of_birth(), datetime.min.time()),
-            'zipCode': fake.zipcode(),
-            'notes': ""
-        }
+        BATCH_SIZE = 100
 
-        ENCRYPTED_CLIENT[DB][COLLECTION].insert_one(data)
+        docs = []
+        for i in range(0, BATCH_SIZE):
+            data = {
+                'firstName': fake.first_name(),
+                'lastName': fake.last_name(),
+                'dateOfBirth': datetime.combine(fake.date_of_birth(), datetime.min.time()),
+                'zipCode': fake.zipcode(),
+                'notes': ""
+            }
+            docs.append(data)
 
-        added += 1
+        ENCRYPTED_CLIENT[DB][COLLECTION].insert_many(docs)
+
+        added += BATCH_SIZE
         print(f"Added {added} records so far.")
 
     else:
