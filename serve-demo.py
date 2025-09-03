@@ -355,29 +355,32 @@ if __name__ == '__main__':
         fake = Faker()
 
         BATCH_SIZE = 50
-        COMPACT_EVERY = 1000
+        COMPACT_EVERY = 2000
 
-        docs = []
-        for i in range(0, BATCH_SIZE):
-            data = {
-                'firstName': fake.first_name(),
-                'lastName': fake.last_name(),
-                'dateOfBirth': datetime.combine(fake.date_of_birth(), datetime.min.time()),
-                'zipCode': fake.zipcode(),
-                'ssn': fake.ssn(),
-                'notes': ""
-            }
-            docs.append(data)
+        try:
+            docs = []
+            for i in range(0, BATCH_SIZE):
+                data = {
+                    'firstName': fake.first_name(),
+                    'lastName': fake.last_name(),
+                    'dateOfBirth': datetime.combine(fake.date_of_birth(), datetime.min.time()),
+                    'zipCode': fake.zipcode(),
+                    'ssn': fake.ssn(),
+                    'notes': ""
+                }
+                docs.append(data)
 
-        ENCRYPTED_CLIENT[DB][COLLECTION].insert_many(docs)
+            ENCRYPTED_CLIENT[DB][COLLECTION].insert_many(docs)
 
-        added += BATCH_SIZE
-        print(f"Added {added} records so far.")
+            added += BATCH_SIZE
+            print(f"Added {added} records so far.")
 
-        if added % COMPACT_EVERY == 0:
-            print("SKIPPING Compacting...")
-            #res = ENCRYPTED_CLIENT[DB].command({"compactStructuredEncryptionData": COLLECTION})
-            #print(res)  # {'ok': 1, ... stats ...}
+            if added % COMPACT_EVERY == 0:
+                print("Compacting...")
+                res = ENCRYPTED_CLIENT[DB].command({"compactStructuredEncryptionData": COLLECTION})
+                print(res)  # {'ok': 1, ... stats ...}
+        except Exception as ex:
+            print(ex)  # usually a timeout for whatever reason
 
     else:
         app.run(host='0.0.0.0', port=PORT, debug=True)
