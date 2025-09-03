@@ -348,7 +348,7 @@ if __name__ == '__main__':
     # Scratchpad code to add a bunch of fake data
     #
 
-    ADD_FAKE_DATA = True
+    ADD_FAKE_DATA = False
     added = 0
 
     while ADD_FAKE_DATA:
