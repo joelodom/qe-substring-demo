@@ -344,6 +344,7 @@ def search():
 
     print("Query:")
     pprint(PIPELINE)
+    print()
 
     cursor = ENCRYPTED_CLIENT[DB][COLLECTION].aggregate(PIPELINE)
     docs = []
