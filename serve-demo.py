@@ -9,6 +9,7 @@ from bson.codec_options import CodecOptions
 from bson.binary import STANDARD
 from faker import Faker
 import random
+from pprint import pprint
 
 #
 # Configuration
@@ -256,25 +257,6 @@ def search():
             }
         )
 
-    yearOfBirth = request.args.get('yearOfBirth', '').strip()
-    if yearOfBirth.isdigit() and len(yearOfBirth) == 4:
-        AND.append(
-            {
-                "$gte": [
-                    "$dateOfBirth",
-                    datetime.strptime(f"{yearOfBirth}-01-01", "%Y-%m-%d")
-                ]
-            }
-        )
-        AND.append(
-            {
-                "$lt": [
-                    "$dateOfBirth",
-                    datetime.strptime(f"{int(yearOfBirth) + 1}-01-01", "%Y-%m-%d")
-                ]
-            }
-        )
-    
     zipCode = request.args.get('zipCode', '').strip()
     if len(zipCode) == 5:
         AND.append(
@@ -308,21 +290,60 @@ def search():
             }
         )
 
-    if len(AND) < 1:
+    DOB = {}
+
+    yearOfBirth = request.args.get('yearOfBirth', '').strip()
+    if yearOfBirth.isdigit() and len(yearOfBirth) == 4:
+        DOB["$gte"] = datetime.strptime(f"{yearOfBirth}-01-01", "%Y-%m-%d")
+        DOB["$lt"] = datetime.strptime(f"{int(yearOfBirth) + 1}-01-01", "%Y-%m-%d")
+    
+    if len(AND) < 1 and len(DOB) < 1:
         return {}
 
     PIPELINE = [
-        {
-            "$match": {
-                "$expr": {
-                    "$and": AND
+    ]
+
+    if len(DOB) < 1:
+        # AND only
+        PIPELINE.append(
+            {
+                "$match": {
+                    "$expr": {
+                        "$and": AND
+                    }
                 }
             }
-        },
+        )
+    elif len(AND) < 1:
+        # DOB only
+        PIPELINE.append(
+            {
+                "$match": {
+                    "dateOfBirth": DOB
+                }
+            }
+        )
+    else:
+        # AND and DOB
+        PIPELINE.append(
+            {
+                "$match": {
+                    "$expr": {
+                        "$and": AND
+                    },
+                    "dateOfBirth": DOB
+                }
+            },
+        )
+
+    PIPELINE.append(
         {
             "$project": { "_id": 0, "__safeContent__": 0 }
         }
-    ]
+    )
+
+    print("Query:")
+    pprint(PIPELINE)
 
     cursor = ENCRYPTED_CLIENT[DB][COLLECTION].aggregate(PIPELINE)
     docs = []
@@ -331,11 +352,12 @@ def search():
         doc['dateOfBirth'] = doc['dateOfBirth'].strftime("%Y-%m-%d")
         docs.append(doc)
 
-    return jsonify(list(docs))
+    MAX_TO_RETURN = 100  # For perf and making sure the demo doesn't break
+    return jsonify(list(docs)[:MAX_TO_RETURN])
 
 @app.route('/destroy-db', methods=['POST'])
 def destroy_db():
-    #return 'Safety is in place', 500
+    return 'Safety is in place', 500
 
 
     print("Dropping database...")
