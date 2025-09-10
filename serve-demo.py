@@ -342,7 +342,8 @@ def search():
         }
     )
 
-    print("Query:")
+    print("**** Query ****")
+    print()
     pprint(PIPELINE)
     print()
 
@@ -352,6 +353,11 @@ def search():
         # Reformat DOB
         doc['dateOfBirth'] = doc['dateOfBirth'].strftime("%Y-%m-%d")
         docs.append(doc)
+
+    docs = list(docs)
+    print(f"Query returned {len(docs)} documents.")
+    print()
+    print()
 
     MAX_TO_RETURN = 100  # For perf and making sure the demo doesn't break
     return jsonify(list(docs)[:MAX_TO_RETURN])
@@ -377,8 +383,8 @@ if __name__ == '__main__':
     while ADD_FAKE_DATA:
         fake = Faker()
 
-        BATCH_SIZE = 50
-        COMPACT_EVERY = 2000
+        BATCH_SIZE = 100
+        COMPACT_EVERY = 10000
 
         try:
             docs = []
